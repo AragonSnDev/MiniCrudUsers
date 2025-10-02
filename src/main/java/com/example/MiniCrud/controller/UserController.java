@@ -16,21 +16,10 @@ import java.util.Map;
 public class UserController {
     @Autowired private UserService userService;
 
-    // Se utiliza ResponseEntity y BindingResult para regresar un cuerpo con los errores en caso de que se envien campos vacios
     @PostMapping("/users") public ResponseEntity<?> saveUser(@RequestBody @Valid User user, BindingResult result){
-        // Si hay erroes, se construye un json con los mensajes de cada campo.
-        if (result.hasErrors()) {
-            Map<String, String> errors = new HashMap<>();
-            result.getFieldErrors().forEach(error -> {
-                errors.put(error.getField(), error.getDefaultMessage());
-            });
-            // Json con mensajes de error
-            return ResponseEntity.badRequest().body(errors);
-        }
 
-        // Todo sale bien se guarda el usuario
+        if(result.hasErrors()){ return createResonseWithError(result);}
         User savedUser = userService.createUser(user);
-        // Se regresa una respuesta
         return ResponseEntity.ok(savedUser);
     }
 
@@ -53,5 +42,14 @@ public class UserController {
     public String deleteUserById(@PathVariable("id") Long userId){
 
         return userService.deleteUserById(userId);
+    }
+
+    private ResponseEntity<?> createResonseWithError(BindingResult result){
+        Map<String, String> errors = new HashMap<>();
+        result.getFieldErrors().forEach(error -> {
+            errors.put(error.getField(), error.getDefaultMessage());
+        });
+        // Json con mensajes de error
+        return ResponseEntity.badRequest().body(errors);
     }
 }

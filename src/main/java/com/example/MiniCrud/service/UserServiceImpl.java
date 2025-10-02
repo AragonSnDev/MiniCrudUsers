@@ -2,14 +2,14 @@ package com.example.MiniCrud.service;
 
 import com.example.MiniCrud.entity.User;
 import com.example.MiniCrud.entity.UserRole;
+import com.example.MiniCrud.exceptions.UserNotFoundException;
+import com.example.MiniCrud.exceptions.UserOperationException;
 import com.example.MiniCrud.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -19,22 +19,21 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User createUser(User user) {
+
         try{
             // Se guarda un User nuevo
             return userRepository.save((user));
+
         } catch (Exception e) {
-            // Error inesperado
-            throw new RuntimeException(e);
+            throw new UserOperationException("Error al obtener la lista de usuarios", e);
         }
     }
 
     @Override
     public List<User> getUsersList() {
         try{
-            // Se optione la lista de todos los usuarios
             return new ArrayList<>(userRepository.findAll());
         } catch (Exception e) {
-            // Error inesperado
             throw new RuntimeException(e);
         }
     }
@@ -42,8 +41,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User getUserById(Long userId) {
         try{
-            // Se optione un usuario en espécifico
-            return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + userId));
+            return getUserOrThrow(userId);
         }
         catch (Exception  e) {
             // Error inesperado
@@ -52,61 +50,59 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User updateUser(User user, Long userId) {
+    public User updateUser(User updatedUser, Long userId) {
         try{
-            // Trae el User que se va actualizarr de la BD.
-            // Si el usuario no existe se lanza un RuntimeException
-            User userToUpdate = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + userId));
+            User existingUser = getUserOrThrow(userId);
+            updateUserFields(existingUser, updatedUser);
+            return userRepository.save(existingUser);
 
-            // Se pregunta por la propiedades para sincronizar lo que recibio la peticion (user) y lo que se
-            // va a guardar en la base de datos (userToUpdate)
-            if(propertyisNotEmpty(user.getUserName())){
-                userToUpdate.setUserName(user.getUserName());
-            }
-            if(propertyisNotEmpty(user.getUserEmail())){
-                userToUpdate.setUserEmail(user.getUserEmail());
-            }
-            if(propertyisNotEmpty(user.getRole())){
-                userToUpdate.setRole(user.getRole());
-            }
-
-            // Se actualiza en DB la informacion de userToUpdate en el User que corresponde con su id.
-            return userRepository.save(userToUpdate);
-
-        } catch (RuntimeException e) {
-            // Excepcion si no se encuentra el id
-            throw new RuntimeException("Error al actualizar el usuario: " + e.getMessage());
-        } catch (Exception  e) {
-            // Error inesperado
-            throw new RuntimeException("Error interno al actualizar usuario: " + e.getMessage());
+        } catch (UserNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new UserOperationException("Error al actualizar el usuario", e);
         }
     }
 
     @Override
     public String deleteUserById(Long userId) {
         try{
-            // Se verifica que el usuario exista
             if(!userRepository.existsById(userId)){
-                //Se lanza un mensaje de que el usuario no existe
                 return "Usuario no encontrado con id: " + userId;
             }
-
             userRepository.deleteById(userId);
             return "Usuario eliminado exitosamente";
-
         }  catch (Exception e) {
-            // Error inesperado
-            throw new RuntimeException("Error interno al eliminar usuario", e);
+            throw new UserOperationException("Error al eliminar el usuario", e);
         }
     }
 
-    //Regresa true si la propiedad tiene un valor
-    private boolean propertyisNotEmpty(String value) {
+    private boolean propertyIsNotEmpty(String value) {
+
         return value != null && !value.isBlank();
     }
 
     //Sobrecarga de propertyIsNotEmpty para el enum UserRole
-    private boolean propertyisNotEmpty(UserRole value) {
+    private boolean propertyIsNotEmpty(UserRole value) {
+
         return value != null;
     }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+    }
+
+    private void updateUserFields(User existingUser, User updatedUserData) {
+
+        if (propertyIsNotEmpty(updatedUserData.getUserName())) {
+            existingUser.setUserName(updatedUserData.getUserName());
+        }
+        if (propertyIsNotEmpty(updatedUserData.getUserEmail())) {
+            existingUser.setUserEmail(updatedUserData.getUserEmail());
+        }
+        if (propertyIsNotEmpty(updatedUserData.getRole())) {
+            existingUser.setRole(updatedUserData.getRole());
+        }
+    }
+
+
 }
