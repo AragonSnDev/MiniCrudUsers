@@ -28,6 +28,13 @@ public class User {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
+    public User(UserRole role, String userEmail, String userName, Long userId) {
+        this.role = role;
+        this.userEmail = userEmail;
+        this.userName = userName;
+        this.userId = userId;
+    }
+
     public UserRole getRole() {
         return role;
     }

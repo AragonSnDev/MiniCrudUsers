@@ -51,33 +51,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User updateUser(User updatedUser, Long userId) {
-        try{
-            User existingUser = getUserOrThrow(userId);
-            updateUserFields(existingUser, updatedUser);
-            return userRepository.save(existingUser);
-
-        } catch (UserNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new UserOperationException("Error al actualizar el usuario", e);
-        }
+        return userRepository.findById(userId).map(user -> userRepository.save(user)).orElse(null);
     }
 
     @Override
-    public String deleteUserById(Long userId) {
-        try{
-            if(!userRepository.existsById(userId)){
-                return "Usuario no encontrado con id: " + userId;
-            }
-            userRepository.deleteById(userId);
-            return "Usuario eliminado exitosamente";
-        }  catch (Exception e) {
-            throw new UserOperationException("Error al eliminar el usuario", e);
-        }
+    public boolean deleteUserById(Long userId) {
+       return userRepository.findById(userId).map(user -> {
+           userRepository.deleteById(user.getUserId());
+           return true;
+       }).orElse(false);
     }
 
     private boolean propertyIsNotEmpty(String value) {
-
         return value != null && !value.isBlank();
     }
 
@@ -103,6 +88,8 @@ public class UserServiceImpl implements UserService {
             existingUser.setRole(updatedUserData.getRole());
         }
     }
+
+
 
 
 }
